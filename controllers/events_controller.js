@@ -1,6 +1,6 @@
 const events = require("express").Router();
 const db = require("../models");
-const { Event } = db;
+const { Event, Meet_Greet, Set_Time, Stage, Band } = db;
 const { Op } = require("sequelize");
 
 // FIND ALL EVENTS
@@ -21,13 +21,51 @@ events.get("/", async (req, res) => {
 });
 
 // FIND SPECIFIC EVENT
-events.get("/:id", async (req, res) => {
+events.get("/:name", async (req, res) => {
   try {
     const foundEvent = await Event.findOne({
-      where: { event_id: req.params.id },
+      where: { name: req.params.id },
+      include: [
+        {
+          model: Meet_Greet,
+          as: "meet_greets",
+          attributes: { exclude: ["event_id", "band_id"] },
+          include: {
+            model: Band,
+            as: "band",
+            where: {
+              name: {
+                [Op.like]: `%${req.query.band ? req.query.band : ""}%`,
+              },
+            },
+          },
+        },
+        {
+          model: Set_Time,
+          as: "set_times",
+          include: {
+            model: Band,
+            as: "band",
+            where: {
+              name: {
+                [Op.like]: `%${req.query.band ? req.query.band : ""}%`,
+              },
+            },
+          },
+        },
+        {
+          model: Stage,
+          as: "stages",
+          where: {
+            name: {
+              [Op.like]: `%${req.query.stage ? req.query.stage : ""}%`,
+            },
+          },
+        },
+      ],
     });
     if (!foundEvent) {
-      res.status(404).json({ error: "No event found with that id." });
+      res.status(404).json({ error: "No event found with that name." });
       return;
     }
     res.status(200).json(foundEvent);
